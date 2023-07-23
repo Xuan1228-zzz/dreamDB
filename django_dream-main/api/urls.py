@@ -12,5 +12,13 @@ urlpatterns = [
     path("exercises/<int:pk>", views.ExerciseView.as_view({"get": "retrieve"})),
 ]
 
+urlpatterns += [
+    path("MonthHistory/<int:user_id>/", views.ExerciseMonthView.as_view()), #特定user的運動紀錄
+]
+
+urlpatterns += [
+    path("DayHistory/<int:user_id>/", views.ExerciseDayView.as_view()), #特定user的運動紀錄
+]
+
 
 # .list(), .retrieve(), .create(), .update(), .partial_update(), .destroy()

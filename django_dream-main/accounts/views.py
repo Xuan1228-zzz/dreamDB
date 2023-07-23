@@ -17,8 +17,10 @@ class LoginView(APIView):
 
     def post(self, request):
         username = request.data.get("username")
-        password = request.data.get("password")
-        user = authenticate(username=username, password=password)
+        # password = request.data.get("password")
+        # user = authenticate(username=username, password=password)
+        user = authenticate(request, username=username)
+        
 
         if user:
             login(request, user)
@@ -39,9 +41,9 @@ class UserView(ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializers
 
-    def perform_create(self, serializer):
-        password = make_password(serializer.validated_data["password"])
-        serializer.save(password=password)
+    # def perform_create(self, serializer):
+    #     password = make_password(serializer.validated_data["password"])
+    #     serializer.save(password=password)
 
     def get_permissions(self):
         if self.action == "list":
@@ -49,7 +51,7 @@ class UserView(ModelViewSet):
         elif self.action == "retrieve":
             permission_classes = [IsUserOrAdmin]
         else:
-            permission_classes = [IsAuthenticated]
+            permission_classes = [AllowAny]
         return [permission() for permission in permission_classes]
 
     # def perform_create(self, serializer):

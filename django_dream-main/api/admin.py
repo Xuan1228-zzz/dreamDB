@@ -24,7 +24,8 @@ class GearAdmin(admin.ModelAdmin):
 
 
 class ExerciseAdmin(admin.ModelAdmin):
-    list_display = ["user", "gear", "timestamp", "accuracy"]
+    list_display = ["user", "gear", "timestamp", "count"]
+    
 
 
 class ThingAdmin(admin.ModelAdmin):

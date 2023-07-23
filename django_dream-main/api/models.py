@@ -34,7 +34,7 @@ class Gear(models.Model):
     level = models.CharField(choices=Level.choices, max_length=15, blank=True)
     type = models.IntegerField(choices=Type.choices, blank=True)
     color = models.CharField(choices=Color.choices, max_length=255, blank=True)
-    work_max = models.IntegerField(blank=True)
+    work_max = models.IntegerField(blank=True, null=True)
     exp = models.FloatField(default=0, blank=True)
     lucky = models.FloatField(blank=True, null=True)
     coupon = models.CharField(max_length=255, blank=True, null=True)
@@ -59,8 +59,9 @@ class Gear(models.Model):
 class Exercise(models.Model):
     gear = models.ForeignKey(Gear, on_delete=models.CASCADE)
     timestamp = models.DateTimeField(auto_now_add=True)
-    accuracy = models.FloatField()
+    # accuracy = models.FloatField()
     user = models.ForeignKey(User, on_delete=models.CASCADE)
+    count = models.PositiveIntegerField(default=0)
 
     class Meta:
         managed = True

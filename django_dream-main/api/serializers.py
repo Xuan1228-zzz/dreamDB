@@ -19,13 +19,16 @@ class GearSerializers(serializers.ModelSerializer):
         fields = "__all__"
 
 
+
 class ExerciseSerializers(serializers.ModelSerializer):
     # user = serializers.ReadOnlyField(source="user.username")
     # user = serializers.SerializerMethodField()
     # def get_user(self, obj):
     #     return {"id": obj.user.id, "username": obj.user.username}
     user = serializers.PrimaryKeyRelatedField(read_only=True)
-
+    gear = serializers.ReadOnlyField(source="gear.type")
+    
     class Meta:
         model = Exercise
         fields = "__all__"
+

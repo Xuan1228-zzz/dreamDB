@@ -1,10 +1,12 @@
 # from django.shortcuts import render
 from .models import Thing, Gear, Exercise
+from django.db.models import Sum,Q
 from accounts.permissions import IsUserOrAdmin
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.permissions import IsAdminUser, IsAuthenticated, AllowAny
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from .serializers import (
     GearSerializers,
@@ -39,14 +41,70 @@ class ExerciseView(ModelViewSet):
     def perform_create(self, serializer):  #
         data = serializer.validated_data
         gear = data.get("gear")
-        accuracy = data.get("accuracy")  # or from server
+        count = data.get("count")  # or from server
 
         if gear.user != self.request.user:
             raise PermissionDenied("You are not allowed to modify this gear.")
 
-        gear.exp += accuracy  # calculate exp with exercise...
+        # 之後修改成加權方式
+        gear.exp += count  # calculate exp with exercise...
         gear.save()
 
         serializer.save(user=self.request.user)
 
         # return Response(serializer.data, status=201) # customize response
+
+class ExerciseMonthView(APIView):
+    
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, user_id): #抓取特定user以及當前月份完成運動的紀錄
+        year = int(request.GET.get("year"))
+        month = int(request.GET.get("month"))
+        exercises =  (Exercise.objects.filter(
+                    user_id=user_id,
+                    timestamp__year=year,
+                    timestamp__month=month,)
+                    .dates("timestamp", "day")
+                    .values_list("timestamp__day", flat=True)
+                    )
+    
+        print(exercises)
+        return Response({
+            "year":year,
+            "month":month,
+            "days":list(exercises)
+            # "current_month_records":serializer.data,
+            # "type":serializer1.data,
+        })
+
+class ExerciseWeekView(APIView):
+
+    permission_classes = [IsAuthenticated]
+
+
+
+class ExerciseDayView(APIView): #使用者每日運動種類與次數 目前是直接加總
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, user_id):
+        year = int(request.GET.get("year"))
+        month = int(request.GET.get("month"))
+        day = int(request.GET.get("day"))
+        type_filter = Q(gear__type=0) | Q(gear__type=1) | Q(gear__type=2)
+        
+        exercises = Exercise.objects.filter(
+            user_id=user_id,
+            timestamp__year=year,
+            timestamp__month=month,
+            timestamp__day=day
+        ).filter(
+            type_filter
+        ).values('gear__type').annotate(
+            type_total_count=Sum('count')
+        )
+        # 使用列表推导式将每个gear类型和对应的count字段组合成字典
+        result_data = [{"gear_type": item["gear__type"], "count": item["type_total_count"]} for item in exercises]
+        print(result_data)
+        return Response(result_data)
+    
