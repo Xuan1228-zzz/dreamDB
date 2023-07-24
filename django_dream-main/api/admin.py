@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Thing, Gear, Exercise
+from .models import Thing, Gear, Exercise, WeekTask
 
 
 # Register your models here.
@@ -24,14 +24,18 @@ class GearAdmin(admin.ModelAdmin):
 
 
 class ExerciseAdmin(admin.ModelAdmin):
-    list_display = ["user", "gear", "timestamp", "count"]
+    list_display = ["user", "gear", "timestamp", "count", "accuracy"]
     
-
 
 class ThingAdmin(admin.ModelAdmin):
     list_display = ["user", "level", "amount"]
 
 
+class WeekTaskAdmin(admin.ModelAdmin):
+    list_display = ["user", "week_start_date", "task_count","last_completed_date"]
+
+
 admin.site.register(Gear, GearAdmin)
 admin.site.register(Exercise, ExerciseAdmin)
 admin.site.register(Thing, ThingAdmin)
+admin.site.register(WeekTask, WeekTaskAdmin)

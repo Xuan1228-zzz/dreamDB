@@ -32,3 +32,4 @@ class ExerciseSerializers(serializers.ModelSerializer):
         model = Exercise
         fields = "__all__"
 
+

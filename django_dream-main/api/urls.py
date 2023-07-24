@@ -20,5 +20,9 @@ urlpatterns += [
     path("DayHistory/<int:user_id>/", views.ExerciseDayView.as_view()), #特定user的運動紀錄
 ]
 
+urlpatterns += [
+    # 其他 URL 配置...
+    path('complete-weekly-task/<int:user_id>/', views.CompleteWeeklyTaskAPIView.as_view()),
+]
 
 # .list(), .retrieve(), .create(), .update(), .partial_update(), .destroy()

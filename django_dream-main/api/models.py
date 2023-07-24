@@ -59,8 +59,8 @@ class Gear(models.Model):
 class Exercise(models.Model):
     gear = models.ForeignKey(Gear, on_delete=models.CASCADE)
     timestamp = models.DateTimeField(auto_now_add=True)
-    # accuracy = models.FloatField()
     user = models.ForeignKey(User, on_delete=models.CASCADE)
+    accuracy = models.FloatField(default=0.0)
     count = models.PositiveIntegerField(default=0)
 
     class Meta:
@@ -91,3 +91,17 @@ class Thing(models.Model):
 
     def __str__(self):
         return f"{self.user.username}_{self.pk}"
+
+class WeekTask(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    week_start_date = models.DateField()  # 记录每周任务开始日期
+    task_count = models.PositiveIntegerField(default=0)  # 记录每周任务完成次数
+    last_completed_date = models.DateField(null=True, blank=True)  # 记录用户上次完成任务的日期
+    
+    class Meta:
+        managed = True
+        unique_together = (('user', 'week_start_date'),)
+
+    def __str__(self):
+        return f"{self.user.username}_{self.pk}"
+
