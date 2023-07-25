@@ -173,27 +173,3 @@ class ExerciseWeekView(APIView):
         return Response({
             "days":days
         })
-    
-
-# class ExerciseWeekView(APIView):
-
-#     permission_classes = [IsAuthenticated]
-
-#     def post(self, request):
-#         user = request.user
-#         today = datetime.now().date()
-
-#         # 获取用户过去七天的所有运动记录
-#         seven_days_ago = today - timedelta(days=7)
-#         exercises = Exercise.objects.filter(
-#             user=user,
-#             timestamp__date__gte=seven_days_ago, 
-#             timestamp__date__lte=today
-#             )
-
-#         # 检查是否连续七天完成任务
-#         if exercises.count() >= 7:
-#             # 给予奖励（根据具体需求实现）
-#             return Response({'message': 'Congratulations! You have completed the weekly task for seven consecutive days and earned a reward.'})
-#         else:
-#             return Response({'message': 'Task completed for today.'})
