@@ -15,6 +15,7 @@ class GearAdmin(admin.ModelAdmin):
         "user",
         "level",
         "type",
+        "loaded",
         "color",
         "work_max",
         "exp",
@@ -32,7 +33,7 @@ class ThingAdmin(admin.ModelAdmin):
 
 
 class WeekTaskAdmin(admin.ModelAdmin):
-    list_display = ["user", "week_start_date", "task_count","last_completed_date"]
+    list_display = ["user", "week_start", "count","last_completed"]
 
 
 admin.site.register(Gear, GearAdmin)

@@ -33,6 +33,7 @@ class Gear(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True)
     level = models.CharField(choices=Level.choices, max_length=15, blank=True)
     type = models.IntegerField(choices=Type.choices, blank=True)
+    loaded = models.BooleanField(default=False) #是否裝備
     color = models.CharField(choices=Color.choices, max_length=255, blank=True)
     work_max = models.IntegerField(blank=True, null=True)
     exp = models.FloatField(default=0, blank=True)
@@ -100,9 +101,9 @@ class WeekTask(models.Model):
         primary_key=True,
         related_name="task"
     )
-    week_start_date = models.DateField(auto_now=True)  # 记录每周任务开始日期
-    task_count = models.PositiveIntegerField(default=0)  # 记录每周任务完成次数
-    last_completed_date = models.DateField(null=True, blank=True)  # 记录用户上次完成任务的日期
+    week_start = models.DateField(auto_now=True)  # 记录每周任务开始日期
+    count = models.PositiveIntegerField(default=0)  # 记录每周任务完成次数
+    last_completed = models.DateField(null=True, blank=True)  # 记录用户上次完成任务的日期
     
     class Meta:
         managed = True
