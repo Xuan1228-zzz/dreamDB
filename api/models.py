@@ -6,6 +6,8 @@
 #   * Remove `managed = False` lines if you wish to allow Django to create, modify, and delete the table
 # Feel free to rename the models, but don't rename db_table values or field names.
 
+from  datetime import datetime
+import django
 from django.db import models
 
 from accounts.models import User
@@ -23,8 +25,8 @@ class Gear(models.Model):
         COLORFUL = ("COLORFUL", "彩色")
 
     class Type(models.IntegerChoices):  # Gear.Type.choices
-        A = (0, "帽子/伏地挺身")
-        B = (1, "手套/二頭彎舉")
+        A = (0, "上衣/二頭彎舉")
+        B = (1, "下著/伏地挺身")
         C = (2, "鞋子/深蹲")
 
     # primary_key = True in production
@@ -101,9 +103,9 @@ class WeekTask(models.Model):
         primary_key=True,
         related_name="task"
     )
-    week_start = models.DateField(auto_now=True)  # 记录每周任务开始日期
-    count = models.PositiveIntegerField(default=0)  # 记录每周任务完成次数
-    last_completed = models.DateField(null=True, blank=True)  # 记录用户上次完成任务的日期
+    week_start = models.DateField(auto_now=False, default = django.utils.timezone.now)  # 記錄每周任務開始日期
+    count = models.PositiveIntegerField(default=0)  # 記錄每周完成次數
+    last_completed = models.DateField(null=True, blank=True)  # 記錄用戶上次完成日期
     
     class Meta:
         managed = True

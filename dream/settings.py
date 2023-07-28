@@ -121,11 +121,11 @@ DATABASES = {
 
 LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = 'Asia/Taipei'
+TIME_ZONE = 'Asia/Taipei' 
 
 USE_I18N = True
 
-USE_TZ = True
+USE_TZ = False # Asia/Taipei-> False, UTC -> True
 
 
 # Static files (CSS, JavaScript, Images)

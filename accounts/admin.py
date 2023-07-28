@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from api.admin import GearInline
+from api.admin import GearInline , TaskInline
 from .models import User
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import Group
@@ -12,9 +12,10 @@ PERMISSION_FIELDS = ("is_superuser", "is_active")
 
 
 class CustomUserAdmin(UserAdmin):
-    # inlines = [  # 在 user admin site 展開 gear
-    #     GearInline,
-    # ]
+    inlines = [  # 在 user admin site 展開 gear
+        # GearInline,
+        TaskInline
+    ]
 
     list_display = (
         "username",

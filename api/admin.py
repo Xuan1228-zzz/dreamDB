@@ -7,6 +7,11 @@ class GearInline(admin.StackedInline):  # admin.TabularInline
     model = Gear
     extra = 1
 
+# Register your models here.
+class TaskInline(admin.StackedInline):  # admin.TabularInline
+    model = WeekTask
+    extra = 1
+
 
 class GearAdmin(admin.ModelAdmin):
     list_display = [

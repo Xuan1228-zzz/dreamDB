@@ -12,18 +12,22 @@ urlpatterns = [
     path("exercises/<int:pk>", views.ExerciseView.as_view({"get": "retrieve"})),
 ]
 
+urlpatterns += [
+    path('gacha/', views.GachaAPIView.as_view(),),
+]
+
 urlpatterns += [ #使用者背包
-    path("GearBag/<int:user_id>/", views.GearBagView.as_view()),
-    path("ThingBag/<int:user_id>/", views.ThingBagView.as_view()), 
+    path("GearBag/", views.GearBagView.as_view()),
+    path("ThingBag/", views.ThingBagView.as_view()), 
 
 ]
 
 urlpatterns += [ #特定user的運動紀錄
-    path("MonthHistory/<int:user_id>/", views.ExerciseMonthView.as_view()), 
-    path("WeekTask/<int:user_id>/", views.ExerciseWeekView.as_view()), 
-    path('complete-weekly-task/<int:user_id>/', views.CompleteWeeklyTaskAPIView.as_view()),
-    path("DayHistory/<int:user_id>/", views.ExerciseDayView.as_view()),
+    path("history/<int:year>/<int:month>/", views.ExerciseMonthView.as_view()), 
+    path("task/", views.ExerciseWeekView.as_view()), 
+    # path('complete-weekly-task/', views.CompleteWeeklyTaskAPIView.as_view()),
+    path("history/<int:year>/<int:month>/<int:day>/", views.ExerciseDayView.as_view()),
 ]
 
 
-# .list(), .retrieve(), .create(), .update(), .partial_update(), .destroy()
+# .list(), .retrieve(), .create(), .update(), .partial_update() , .destroy()
