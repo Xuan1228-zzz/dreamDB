@@ -1,4 +1,5 @@
 from django.urls import path, include
+
 from . import views
 
 urlpatterns = [
@@ -23,3 +24,4 @@ urlpatterns += [
     path("mint/", views.mintView.as_view()),
 ]
 # .list(), .retrieve(), .create(), .update(), .partial_update(), .destroy()
+

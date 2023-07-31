@@ -25,11 +25,12 @@ class GearAdmin(admin.ModelAdmin):
         "exp",
         "lucky",
         "coupon",
+        "img_url"
     ]
 
 
 class ExerciseAdmin(admin.ModelAdmin):
-    list_display = ["user", "type", "gear", "timestamp", "count", "accuracy"]
+    list_display = ["user", "type", "gear", "timestamp", "count", "accuracy","video_url"]
 
 
 class ThingAdmin(admin.ModelAdmin):

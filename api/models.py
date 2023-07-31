@@ -38,6 +38,8 @@ class Gear(models.Model):
     exp = models.FloatField(default=0, blank=True)
     lucky = models.FloatField(blank=True, null=True)
     coupon = models.CharField(max_length=255, blank=True, null=True)
+    img_url = models.ImageField(null=True, upload_to='images/',
+                                height_field=None, width_field=None, max_length=None, blank=True)
 
     def __str__(self):
         return f"{self.user.username}_{self.id}"
@@ -61,6 +63,8 @@ class Exercise(models.Model):
     # user = models.ForeignKey(User, on_delete=models.CASCADE)
     count = models.PositiveIntegerField(default=0)  # new
     accuracy = models.FloatField(default=0.0)
+    video_url = models.FileField(upload_to="videos/", null=True, blank=True)
+
 
     @property
     def user(self):

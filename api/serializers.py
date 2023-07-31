@@ -18,6 +18,7 @@ class GearSerializers(serializers.ModelSerializer):
     type = serializers.SerializerMethodField()
     level = serializers.SerializerMethodField()
     color = serializers.SerializerMethodField()
+    img_url = serializers.ImageField(required=False)
 
     class Meta:
         model = Gear
@@ -46,6 +47,8 @@ class GearSerializers(serializers.ModelSerializer):
 class ExerciseSerializers(serializers.ModelSerializer):
     timestamp = serializers.DateTimeField(read_only=True)
     thing_level = serializers.IntegerField(write_only=True, required=False)
+    video_url = serializers.FileField(
+        max_length=None, allow_empty_file=True, use_url=True)
     # user = serializers.PrimaryKeyRelatedField(read_only=True)
 
     class Meta:
