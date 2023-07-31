@@ -1,18 +1,18 @@
 from django.contrib import admin
 
-from api.admin import GearInline , TaskInline
+from api.admin import GearInline, TaskInline
 from .models import User
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import Group
 
 # Register your models here.
 
-PROFILE_FIELDS = ("weight", "height", "gender", "birth", "email")
+PROFILE_FIELDS = ("weight", "height", "gender", "birth", "email","address")
 PERMISSION_FIELDS = ("is_superuser", "is_active")
 
 
 class CustomUserAdmin(UserAdmin):
-    inlines = [  # 在 user admin site 展開 gear
+    inlines = [  # 在 user admin site 展開 
         # GearInline,
         TaskInline
     ]
@@ -52,13 +52,13 @@ admin.site.register(User, CustomUserAdmin)
 admin.site.unregister(Group)
 
 
-print(
-    "-----------",
-    # list(UserAdmin.fieldsets),
-    "-----------",
-    # list(UserAdmin.add_fieldsets),
-    sep="\n",
-)
+# print(
+#     "-----------",
+#     # list(UserAdmin.fieldsets),
+#     "-----------",
+#     # list(UserAdmin.add_fieldsets),
+#     sep="\n",
+# )
 
 
 # [

@@ -1,10 +1,14 @@
 # from django.shortcuts import render
+from datetime import datetime, timedelta
+import os
 import random
 from accounts.models import User
+from api.utils.ethereum import mint_test, read_test
 from .models import Thing, Gear, Exercise, WeekTask
-from datetime import datetime, timedelta
-from django.db.models import Sum,Q
 from accounts.permissions import IsUserOrAdmin
+from django.db import transaction
+from django.db.models import Sum, Value
+from django.db.models.functions import Coalesce
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.permissions import IsAdminUser, IsAuthenticated, AllowAny
 from rest_framework.exceptions import PermissionDenied, ValidationError
@@ -18,44 +22,268 @@ from .serializers import (
 )
 
 
-class ThingView(ModelViewSet):
-    queryset = Thing.objects.all()
-    serializer_class = ThingSerializers
-    permission_classes = [IsAuthenticated]
-
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
-
-class ThingBagView(APIView): #查看使用者背包，可查看現有的小物
-    
+class BagView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        thing = Thing.objects.filter(user=request.user).order_by("level")
-        serializer = GearSerializers(instance=thing, many=True)
+        user = request.user
+        things = user.thing_set.all().order_by("level")
+        gears = user.gear_set.all().order_by("type", "level")
+        thing_serializer = ThingSerializers(things, many=True)
+        gear_serializer = GearSerializers(gears, many=True)
+        return Response(
+            {"gears": gear_serializer.data, "things": thing_serializer.data}
+        )
 
+
+class ThingView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        things = user.thing_set.all().order_by("level")
+        serializer = ThingSerializers(things, many=True)
         return Response(serializer.data)
 
-class GachaAPIView(APIView):
 
-    permission_classes = [IsAuthenticated]  
+class GearView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        gears = user.gear_set.all().order_by("type", "level")
+        serializer = GearSerializers(gears, many=True)
+        return Response(serializer.data)
+
+    # class GearView(ModelViewSet):
+    #     queryset = Gear.objects.all()
+    #     serializer_class = GearSerializers
+    #     permission_classes = [IsAuthenticated]
+
+    # def perform_create(self, serializer):
+    #     serializer.save(user=self.request.user)
+
+
+class ExerciseView(ModelViewSet):
+    queryset = Exercise.objects.all()
+    serializer_class = ExerciseSerializers
+    permission_classes = [IsAuthenticated]
+
+    def handle_task(self, exercise, user):
+        if exercise.exists():
+            return {}
+        today = datetime.now().date()
+        task = WeekTask.objects.get(user=user)
+        delta = today - task.week_start
+
+        if delta == timedelta(days=task.count - 1):
+            return {}
+
+        if delta == timedelta(days=task.count):
+            task.count += 1
+            if task.count >= 7:
+                message = "恭喜完成每周任務!"
+            else:
+                message = "完成本日任務"
+        else:
+            task.week_start = today
+            task.count = 1
+            message = "完成首日任務"
+
+        task.save()  # 保存更新後的 WeekTask
+        return {"task": message}
+
+    @transaction.atomic
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        gear = data.get("gear")
+        count = data.get("count")
+        accuracy = data.get("accuracy")
+        thing_level = data.get("thing_level")
+        today = datetime.now().date()
+
+        if gear.user != self.request.user:
+            raise PermissionDenied("You are not allowed to modify this gear.")
+
+        if thing_level != None:
+            thing = Thing.objects.filter(user=gear.user, level=thing_level).first()
+            if not thing or thing.amount == 0:
+                raise PermissionDenied("You don't have any thing of specified level")
+
+            thing.amount -= 1
+            thing.save()
+
+        daily_exercise = Exercise.objects.filter(timestamp__date=today)
+
+        total_count = (
+            daily_exercise.filter(
+                gear=gear.id,
+            ).aggregate(total=Coalesce(Sum("count"), Value(0)))
+        )["total"]
+
+        if total_count >= gear.work_max:
+            raise PermissionDenied(
+                "You have already reached the maximum exp for this gear today"
+            )
+
+        task = self.handle_task(daily_exercise, gear.user)
+
+        count = min(count, gear.work_max - total_count)
+        bonus_table = {k: v for k, v in enumerate([1.25, 1.5, 1.75])}
+        bonus = bonus_table.get(thing_level, 1)
+        exp = count * bonus * accuracy
+        gear.exp += exp
+        gear.save()
+        serializer.save()
+
+        return Response(
+            {
+                **serializer.data,
+                "exp": exp,
+                "total_exp": gear.exp,
+                "total_count": min(total_count + count, gear.work_max),
+                **task,
+            },
+            status=201,
+        )
+
+    # def perform_create(self, serializer):  #
+    #     data = serializer.validated_data
+    #     gear = data.get("gear")
+    #     accuracy = data.get("accuracy")  # or from server
+    #     count = data.get("count")
+
+    #     if gear.user != self.request.user:
+    #         raise PermissionDenied("You are not allowed to modify this gear.")
+
+    #     gear.exp += accuracy  # calculate exp with exercise...
+    #     gear.save()
+
+    #     serializer.save()
+
+
+class ExerciseDayView(APIView):  # 使用者每日運動種類與次數 目前是直接加總
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, year, month, day):
+        exercises = (
+            Exercise.objects.filter(
+                gear__user=request.user,
+                timestamp__year=year,
+                timestamp__month=month,
+                timestamp__day=day,
+            )
+            .values("gear__type")
+            .annotate(total_count=Sum("count"))
+        )
+
+        result_data = {
+            item["gear__type"]: {"count": item["total_count"]} for item in exercises
+        }
+        result = [{"type": type[1], "count": 0} for type in Gear.Type.choices]
+        for k, v in result_data.items():
+            result[k]["count"] = v["count"]
+
+        return Response({"empty": not len(exercises), "records": result})
+
+
+class ExerciseMonthView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, year, month):  # 抓取特定user以及當前月份完成運動的紀錄
+        exercises = (
+            Exercise.objects.filter(
+                gear__user=request.user,
+                timestamp__year=year,
+                timestamp__month=month,
+            ).dates(
+                "timestamp",
+                "day",
+            )
+            # .values_list("timestamp__day", flat=True)
+        )
+
+        print(exercises)
+
+        return Response(list(exercises))
+
+
+class ExerciseWeekView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):  # 抓取特定user以及當前月份完成運動的紀錄
+        task = request.user.task
+        start = task.week_start
+        count = task.count
+        today = datetime.now().date()
+
+        if today - start > timedelta(days=count):
+            task.week_start = today
+            task.count = 0
+            task.save()
+        # exercise_days = Exercise.objects.filter(timestamp__range=(start, end))
+        days = [{"date": start + timedelta(i), "done": i < count} for i in range(7)]
+
+        return Response({"dates": days, "count": count})
+
+    # def post(self, request):
+    #     today = datetime.now().date()
+
+    #     # 獲取使用者當天的所有運動紀錄
+    #     if Exercise.objects.filter(user=request.user, timestamp__date=today).exists():
+    #         return Response(
+    #             {"message": "You have already completed the task for today."}
+    #         )
+
+    #     task = WeekTask.objects.get(user=request.user)
+    #     delta = today - task.week_start
+
+    #     if delta == timedelta(days=task.count - 1):
+    #         return Response(
+    #             {"message": "You have already completed the task for today."}
+    #         )
+
+    #     if delta == timedelta(days=task.count):
+    #         task.count += 1
+    #         if task.count >= 7:
+    #             # task.count = 0
+    #             res = "恭喜"
+    #         else:
+    #             res = "++"
+    #     else:
+    #         task.week_start = today
+    #         task.count = 1
+    #         res = "restart"
+
+    #     task.save()  # 保存更新後的 WeekTask
+
+    #     return Response({"message": res, "count": task.count, "start": task.week_start})
+
+
+class GachaAPIView(APIView):
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
-
         # 設定各等級小物的機率值
         level_probabilities = {
-            "BASIC": 0.6,
-            "INTERMEDIATE": 0.3,
-            "HIGH_END": 0.1,
+            0: 0.6,
+            1: 0.3,
+            2: 0.1,
         }
 
-         # 根據機率隨機獲取一個等級
+        # 根據機率隨機獲取一個等級
         level_choices = list(level_probabilities.keys())
         level_probabilities_values = list(level_probabilities.values())
-        random_level = random.choices(level_choices, weights=level_probabilities_values)[0]
-        print(random_level)
+        random_level = random.choices(
+            level_choices, weights=level_probabilities_values
+        )[0]
+
         # 檢查是否已經有同一等級的thing存在
-        existing_thing = Thing.objects.filter(user=request.user, level=random_level).first()
+        existing_thing = Thing.objects.filter(
+            user=request.user, level=random_level
+        ).first()
 
         if existing_thing:
             # 如果已存在，將amount加一
@@ -70,185 +298,29 @@ class GachaAPIView(APIView):
 
         # 返回結果
         response_data = {
-            "message": "You got a new thing!",
-            "thing_id": new_thing.pk,
-            "level": [new_thing.level, new_thing.get_level_display()],
+            "message": "You got a new thing x 1",
+            "level": new_thing.level,
+            "name": new_thing.get_level_display(),
             "amount": new_thing.amount,
         }
         return Response(response_data)
 
-class GearView(ModelViewSet):
-    queryset = Gear.objects.all()
-    serializer_class = GearSerializers
-    permission_classes = [IsAuthenticated]
 
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
-
-class GearBagView(APIView): #查看使用者背包，可查看現有的NFT
-    
-    permission_classes = [IsAuthenticated]
-
+class readView(APIView):
     def get(self, request):
-        gear = Gear.objects.filter(user=request.user).order_by("type")
-        serializer = GearSerializers(instance=gear, many=True)
-
-        return Response(serializer.data)
-
-class ExerciseView(ModelViewSet):
-    queryset = Exercise.objects.all()
-    serializer_class = ExerciseSerializers
-    permission_classes = [IsAuthenticated]
-    
-    # def perform_create(self, serializer):  
-    #     data = serializer.validated_data
-    #     gear = data.get("gear")
-    #     accuracy = data.get("accuracy")  # or from server
-
-    #     if gear.user != self.request.user:
-    #         raise PermissionDenied("You are not allowed to modify this gear.")
-
-    #     # 之後修改加權方式
-    #     gear.exp += accuracy  # calculate exp with exercise...
-    #     gear.save()
-
-    #     serializer.save(user=self.request.user)
-
-    #     # return Response(serializer.data, status=201) # customize response
-    def perform_create(self, serializer):  
-        data = serializer.validated_data
-        gear = data.get("gear")
-        # accuracy = data.get("accuracy")
-        # count = data.get("count")
-
-        if gear.user != self.request.user:
-            raise PermissionDenied("You are not allowed to modify this gear.")
-
-        thing_level = self.request.data.get("thing_level")  # Get the thing_level from the request data
-        serializer.save(user=self.request.user, thing_level=thing_level)  # Save the instance with thing_level
+        try:
+            res = read_test()
+            return Response({"data": res}, status=200)
+        except Exception as err:
+            return Response({"error": str(err)}, status=400)
 
 
-class ExerciseMonthView(APIView):
-    
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request, year, month): #抓取特定user以及當前月份完成運動的紀錄
-
-        exercises =  (Exercise.objects.filter(
-                    user = request.user,
-                    timestamp__year=year,
-                    timestamp__month=month,)
-                    .dates("timestamp", "day", )
-                    # .values_list("timestamp__day", flat=True)
-                    )
-    
-        print(exercises)
-
-        return Response({
-            "days":list(exercises)
-        })
-    
-class ExerciseWeekView(APIView):
-    
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request): #抓取特定user以及當前月份完成運動的紀錄
-        # date = datetime.today().date()
-        # task = request.user.task
-        task = User.objects.get(pk=request.user.pk).task
-
-        start = task.week_start
-        count = task.count
-        # end = start + timedelta(days=7)
-        # exercise_days = Exercise.objects.filter(timestamp__range=(start, end))
-        days = [{"date":start + timedelta(i), "done":i < count} for i in range(7)]
-
-    
-        print(days)
-
-        return Response(days)
-    
+class mintView(APIView):
     def post(self, request):
-        today = datetime.now().date()
+        try:
+            address = request.data.get("address", os.environ.get("PUBLIC_ADDRESS"))
+            receipt = mint_test(address)
+            return Response({"receipt": receipt}, status=200)
 
-        # 獲取使用者當天的所有運動紀 錄
-        if Exercise.objects.filter(user=request.user, timestamp__date=today).exists():
-            return Response({'message': 'You have already completed the task for today.'})
-
-        task = WeekTask.objects.get(user=request.user)
-        delta = today - task.week_start
-        # 檢查今天是否已经完成任务，避免重複計算
-        # res = None
-        if delta == timedelta(days=task.count):
-            task.count += 1
-            if task.count >= 7:
-                task.count = 0
-                res = "恭喜"
-            else:
-                res = "++"
-        elif delta == timedelta(days=task.count - 1):
-            return Response({'message': 'You have already completed the task for today.'})
-        else:
-            task.week_start = today
-            task.count = 1
-            res = "restart"
-     
-        task.save()# 保存更新後的 WeekTask 
-        
-        return Response({'message': res, "count":task.count, "start":task.week_start})  
-
-class ExerciseDayView(APIView): #使用者每日運動種類與次數 目前是直接加總
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request, year, month, day):
-
-        type_filter = Q(gear__type=0) | Q(gear__type=1) | Q(gear__type=2)
-        
-        exercises = Exercise.objects.filter(
-            user = request.user,
-            timestamp__year=year,
-            timestamp__month=month,
-            timestamp__day=day
-        ).filter(
-            type_filter
-        ).values('gear__type').annotate(
-            type_total_count=Sum('count')
-        )
-        print(exercises)
-        # 使用列表推导式将每个gear类型和对应的count字段组合成字典
-        result_data = {item["gear__type"]:{"count": item["type_total_count"]} for item in  exercises}
-        result = [{"type":type[1], "count":0} for type in Gear.Type.choices]
-        for k,v in result_data.items():
-            result[k]["count"] = v["count"]
-        
-        return Response(result)
-    
-     
-    
-class CompleteWeeklyTaskAPIView(APIView): 
-#現在的寫法為寫入運動資料前要先call這個API，不然會顯示already completed --> 有待優化
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request):
-        today = datetime.now().date()
-
-        # 獲取使用者當天的所有運動紀 錄
-        if Exercise.objects.filter(user=request.user, timestamp__date=today).exists():
-            return Response({'message': 'You have already completed the task for today.'})
-
-        task = WeekTask.objects.get(user=request.user)
-        # 檢查今天是否已经完成任务，避免重複計算
-
-        if today - task.week_start == timedelta(days=task.count):
-            task.count += 1
-            if task.count >= 7:
-                task.count = 0
-                res = {'message': 'Congratulations!'}
-        else:
-            task.week_start = today
-            task.count = 1
-            res = {'message': 'Week-Task completed for today.'}
-     
-        task.save()# 保存更新後的 WeekTask 
-        
-        return Response(res)       
+        except Exception as err:
+            return Response({"error": str(err)}, status=400)

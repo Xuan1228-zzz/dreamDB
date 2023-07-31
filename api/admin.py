@@ -7,7 +7,7 @@ class GearInline(admin.StackedInline):  # admin.TabularInline
     model = Gear
     extra = 1
 
-# Register your models here.
+
 class TaskInline(admin.StackedInline):  # admin.TabularInline
     model = WeekTask
     extra = 1
@@ -16,11 +16,10 @@ class TaskInline(admin.StackedInline):  # admin.TabularInline
 class GearAdmin(admin.ModelAdmin):
     list_display = [
         "id",
-        "token_id",
+        # "token_id",
         "user",
         "level",
         "type",
-        "loaded",
         "color",
         "work_max",
         "exp",
@@ -30,18 +29,13 @@ class GearAdmin(admin.ModelAdmin):
 
 
 class ExerciseAdmin(admin.ModelAdmin):
-    list_display = ["user", "gear", "timestamp", "count", "accuracy"]
-    
+    list_display = ["user", "type", "gear", "timestamp", "count", "accuracy"]
+
 
 class ThingAdmin(admin.ModelAdmin):
     list_display = ["user", "level", "amount"]
 
 
-class WeekTaskAdmin(admin.ModelAdmin):
-    list_display = ["user", "week_start", "count","last_completed"]
-
-
 admin.site.register(Gear, GearAdmin)
 admin.site.register(Exercise, ExerciseAdmin)
 admin.site.register(Thing, ThingAdmin)
-admin.site.register(WeekTask, WeekTaskAdmin)
