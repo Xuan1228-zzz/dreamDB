@@ -1,8 +1,11 @@
+import asyncio
+import threading
 from web3 import Web3
 from web3.middleware import construct_sign_and_send_raw_middleware
 from web3.gas_strategies.rpc import rpc_gas_price_strategy
 from web3.datastructures import AttributeDict
 from siwe import SiweMessage, generate_nonce
+from django.conf import settings
 
 import pprint
 
@@ -32,18 +35,27 @@ def setup_web3():
             abi = json.load(abi_file)
             contract = w3.eth.contract(address=contract_address, abi=abi)
         print("set up web3 successfully!")
+
+        # event_loop_thread = threading.Thread(target=listen_to_event)
+        # event_loop_thread.start()
+
         # print("-default address:", acc.address)
         # print("-contract address:", contract_address)
 
     return (w3, contract)
 
 
-def read_test():
-    return contract.functions.NFTList(acc.address).call()  # block_identifier='latest'
+def read_test(address):
+    return contract.functions.NFTList(address).call()  # block_identifier='latest'
+
+
+def get_tokenId():
+    return contract.functions.getTokenId().call()  # block_identifier='latest'
 
 
 def mint_test(to):
     nonce = w3.eth.get_transaction_count(acc.address)
+    token_id = get_tokenId()
     # gp = w3.eth.generate_gas_price()
     # print( contract.functions.mint(acc.address).estimate_gas(...))
 
@@ -77,7 +89,7 @@ def mint_test(to):
         "status": receipt.status,
         "hash": hash,
         "link": f"https://sepolia.etherscan.io/tx/{hash}",
-        "receipt": _receipt,
+        "token_id": token_id,
     }
 
 

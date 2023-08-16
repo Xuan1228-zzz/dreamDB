@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Thing, Gear, Exercise, WeekTask
+from .models import Thing, Gear, Exercise, Wear, WeekTask
 
 
 # Register your models here.
@@ -13,34 +13,44 @@ class TaskInline(admin.StackedInline):  # admin.TabularInline
     extra = 1
 
 
+class WearInline(admin.StackedInline):  # admin.TabularInline
+    model = Wear
+    extra = 1
+
+
 class GearAdmin(admin.ModelAdmin):
     list_display = [
-        "id",
-        # "token_id",
+        # "id",
+        "token_id",
         "user",
         "level",
         "type",
-        "color",
+        "orientation",
+        "lucky",
         "work_max",
         "exp",
-        "lucky",
         "coupon",
-        "img_url"
     ]
 
 
 class ExerciseAdmin(admin.ModelAdmin):
-    list_display = ["user", "type", "gear", "timestamp", "count", "accuracy","video_url"]
+    list_display = ["user", "type", "gear", "timestamp", "count", "accuracy"]
 
 
 class ThingAdmin(admin.ModelAdmin):
-    list_display = ["user", "level", "amount"]
+    list_display = ["user", "type", "amount"]
+
 
 class TaskAdmin(admin.ModelAdmin):
     list_display = ["user", "week_start", "count", "last_completed"]
+
+
+class WearAdmin(admin.ModelAdmin):
+    list_display = ["user", "target", "hair", "top", "bottom", "shoes"]
 
 
 admin.site.register(Gear, GearAdmin)
 admin.site.register(Exercise, ExerciseAdmin)
 admin.site.register(Thing, ThingAdmin)
 admin.site.register(WeekTask, TaskAdmin)
+admin.site.register(Wear, WearAdmin)

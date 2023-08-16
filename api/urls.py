@@ -1,11 +1,11 @@
 from django.urls import path, include
-
 from . import views
 
 urlpatterns = [
     path("bag/", views.BagView.as_view()),
-    path("bag/gears/", views.GearView.as_view()),
-    path("bag/things/", views.ThingView.as_view()),
+    path("gears/", views.GearView.as_view({"get": "list", "post": "create"})),
+    path("gears/<int:token_id>", views.GearView.as_view({"get": "retrieve"})),
+    path("things/", views.ThingView.as_view()),
     path("exercises/", views.ExerciseView.as_view({"get": "list", "post": "create"})),
 ]
 
@@ -17,11 +17,15 @@ urlpatterns += [
 urlpatterns += [
     path("task/", views.ExerciseWeekView.as_view()),
     path("gacha/", views.GachaAPIView.as_view()),
+    path("target/<int:token_id>", views.WearView.as_view({"put": "_update"})),
+    path(
+        "dress/<int:token_id>",
+        views.WearView.as_view({"put": "update", "delete": "destroy"}),
+    ),
 ]
 
 urlpatterns += [
     path("read/", views.readView.as_view()),  # test only
-    path("mint/", views.mintView.as_view()),
+    # path("mint/", views.mintView.as_view()),
 ]
 # .list(), .retrieve(), .create(), .update(), .partial_update(), .destroy()
-

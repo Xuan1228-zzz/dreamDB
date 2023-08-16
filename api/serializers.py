@@ -1,55 +1,72 @@
-from .models import Thing, Gear, Exercise
+from .models import Thing, Gear, Exercise, Wear
 from rest_framework import serializers
 
 
 class ThingSerializers(serializers.ModelSerializer):
-    name = serializers.SerializerMethodField()
+    # name = serializers.SerializerMethodField()
 
     class Meta:
         model = Thing
-        fields = ["level", "name", "amount"]
+        fields = ["type", "amount"]
 
-    def get_name(self, obj):
-        return obj.get_level_display()
+    # def get_name(self, obj):
+    #     return obj.get_level_display()
 
 
-class GearSerializers(serializers.ModelSerializer):
-    # user = serializers.PrimaryKeyRelatedField(read_only=True)
-    type = serializers.SerializerMethodField()
-    level = serializers.SerializerMethodField()
-    color = serializers.SerializerMethodField()
-    img_url = serializers.ImageField(required=False)
+class MintSerializers(serializers.ModelSerializer):
+    LUCKY_CHOICE = ["regular", "advanced", "high-tech"]
+    exp = serializers.ReadOnlyField()
+    token_id = serializers.ReadOnlyField()
+    coupon = serializers.ReadOnlyField()
+    lucky = serializers.ChoiceField(choices=LUCKY_CHOICE)
 
     class Meta:
         model = Gear
-        # fields = "__all__"
-        exclude = ["user"]
+        fields = [
+            "token_id",
+            "type",
+            "level",
+            "lucky",
+            "exp",
+            "goal_exp",
+            "max_exp",
+            "daily_exp",
+            "custom",
+            "coupon",
+            # "pos",
+            "isTargeted",
+            "isDressed",
+        ]
 
-    def get_type(self, obj):
-        return {
-            "value": obj.type,
-            "name": obj.get_type_display(),
-        }
 
-    def get_level(self, obj):
-        return {
-            "value": obj.level,
-            "name": obj.get_level_display(),
-        }
-
-    def get_color(self, obj):
-        return {
-            "value": obj.color,
-            "name": obj.get_color_display(),
-        }
+class GearSerializers(serializers.ModelSerializer):
+    # user = serializers.PrimaryKeyRelatedField(read_only=True, source="user.address")
+    class Meta:
+        model = Gear
+        fields = [
+            "token_id",
+            "type",
+            "level",
+            "lucky",
+            "exp",
+            "goal_exp",
+            "max_exp",
+            "daily_exp",
+            "custom",
+            "coupon",
+        ]
+        # exclude = ["user"]
 
 
 class ExerciseSerializers(serializers.ModelSerializer):
     timestamp = serializers.DateTimeField(read_only=True)
-    thing_level = serializers.IntegerField(write_only=True, required=False)
-    video_url = serializers.FileField(
-        max_length=None, allow_empty_file=True, use_url=True)
-    # user = serializers.PrimaryKeyRelatedField(read_only=True)
+    # thing_level = serializers.IntegerField(write_only=True, required=False)
+    thing = serializers.ChoiceField(
+        # write_only=True,
+        required=False,
+        choices=[None, "dumbbell", "energy_drink", "protein_powder"],
+    )
+    gear = serializers.PrimaryKeyRelatedField(read_only=True, source="gear.token_id")
 
     class Meta:
         model = Exercise
@@ -61,7 +78,20 @@ class ExerciseSerializers(serializers.ModelSerializer):
         return value
 
     def create(self, validated_data):
-        thing_level = validated_data.pop("thing_level", None)
+        thing = validated_data.pop("thing", None)
         exercise = Exercise.objects.create(**validated_data)
 
         return exercise
+
+
+class WearSerializers(serializers.ModelSerializer):
+    # user = serializers.PrimaryKeyRelatedField(read_only=True, source="user.address")
+    class Meta:
+        model = Wear
+        fields = ["dress", "target"]
+
+
+class WearUpdateSerializers(serializers.ModelSerializer):
+    class Meta:
+        model = Gear
+        fields = ["token_id"]
