@@ -16,12 +16,14 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# import os
+import os
+import firebase_admin
+from firebase_admin import credentials
 # private_key = os.environ.get('PRIVATE_KEY')
 
 
 from pathlib import Path
-
+from firebase_admin import initialize_app
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -39,10 +41,14 @@ ALLOWED_HOSTS = ["*"]
 
 # Application definition
 
+
+
 INSTALLED_APPS = [
     "accounts",
     "api",
+    "notify",
     "rest_framework",
+    'fcm_django',
     # "rest_framework.authtoken",
     "rest_framework_simplejwt",
     "corsheaders",  # CORS
@@ -193,6 +199,15 @@ CSRF_COOKIE_SAMESITE = "Strict"
 CSRF_COOKIE_SECURE = False
 # CSFR_COOKIE_DOMAIN = "localhost"
 
+# CELERY_BROKER_URL = 'redis://localhost:6379/0'
+# CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+# CELERY_ACCEPT_CONTENT = ['json']
+# CELERY_TASK_SERIALIZER = 'json'
+# CELERY_RESULT_SERIALIZER = 'json'
+# CELERY_TIMEZONE = 'Asia/Taipei'
+# CELERY_IMPORTS = ('notify.tasks',)
+
+
 # settings.py
 
 # Set the session engine (e.g., database-backed sessions)
@@ -201,5 +216,6 @@ CSRF_COOKIE_SECURE = False
 # # Set a session key used for signing the session data
 # SESSION_COOKIE_NAME = 'myapp_session_id'
 
-# # Set the session age (e.g., 1 day)
-# SESSION_COOKIE_AGE = 86400  # 1 day in seconds
+FCM_DJANGO_SETTINGS = {
+        "FCM_SERVER_KEY": "AAAAMI_wpMU:APA91bH91L01ofjlCUYBEMNISbET4xB0eXTKNGaoawdKIw2Ed29GpN-SSVvJ_sJjhiBQrJS-ZRfr42OPTK8eugdVqssVHb0B0cXpdA4Yu6s7unVb1KsNixTrhCMg3WqwU5fhQLLi5dVf"
+}
